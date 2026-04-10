@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: linksnip-app
+  namespace: linksnip
+  labels:
+    app: linksnip
+    component: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: linksnip
+      component: web
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        app: linksnip
+        component: web
+    spec:
+      containers:
+        - name: linksnip
+          image: linksnip:v2
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 5000
+          env:
+            - name: REDIS_HOST
+              value: "linksnip-redis"
+            - name: REDIS_PORT
+              value: "6379"
+            - name: BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: linksnip-config
+                  key: base_url
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 5000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "250m"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: linksnip-config
+  namespace: linksnip
+data:
+  base_url: "http://linksnip.example.com"
