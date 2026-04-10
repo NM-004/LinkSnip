@@ -38,15 +38,3 @@ spec:
         - name: redis-data
           persistentVolumeClaim:
             claimName: redis-pvc
----
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: redis-pvc
-  namespace: linksnip
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 1Gi

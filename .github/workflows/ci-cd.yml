@@ -107,9 +107,22 @@ jobs:
       - name: Apply Kubernetes manifests
         run: |
           kubectl apply -f k8s/namespace.yaml
+          kubectl apply -f k8s/redis-pvc.yaml
           kubectl apply -f k8s/redis-deployment.yaml
           kubectl apply -f k8s/deployment.yaml
           kubectl apply -f k8s/service.yaml
+
+      - name: Wait for Redis to be ready
+        run: |
+          kubectl rollout status deployment/linksnip-redis -n linksnip --timeout=180s || {
+            echo "Redis rollout failed. Checking PVC and Redis status..."
+            kubectl get pvc -n linksnip
+            kubectl describe pvc redis-pvc -n linksnip || true
+            kubectl get pods -n linksnip -l app=linksnip,component=redis
+            kubectl describe pods -n linksnip -l app=linksnip,component=redis
+            kubectl logs -n linksnip -l app=linksnip,component=redis --tail=100 || true
+            exit 1
+          }
       - name: Debug - Check pod status
         if: always()
         run: |
@@ -120,7 +133,7 @@ jobs:
           kubectl describe pods -n linksnip
           echo ""
           echo "=== Pod Logs ==="
-          kubectl logs -n linksnip -l app=linksnip-app --tail=50 || true
+          kubectl logs -n linksnip -l app=linksnip,component=web --tail=50 || true
           echo ""
           echo "=== Events ==="
           kubectl get events -n linksnip --sort-by='.lastTimestamp'
@@ -130,7 +143,7 @@ jobs:
             echo "Rollout failed. Checking pod status..."
             kubectl get pods -n linksnip
             kubectl describe pods -n linksnip
-            kubectl logs -n linksnip -l app=linksnip-app --tail=100 || true
+            kubectl logs -n linksnip -l app=linksnip,component=web --tail=100 || true
             exit 1
           }
 

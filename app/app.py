@@ -13,7 +13,13 @@ REDIS_HOST = os.environ.get("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.environ.get("REDIS_PORT", 6379))
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:5000")
 
-r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
+r = redis.Redis(
+  host=REDIS_HOST,
+  port=REDIS_PORT,
+  decode_responses=True,
+  socket_connect_timeout=1,
+  socket_timeout=1,
+)
 
 CHARS = string.ascii_letters + string.digits
 
@@ -207,11 +213,17 @@ def stats():
 
 @app.route("/health")
 def health():
-    try:
-        r.ping()
-        return jsonify({"status": "healthy", "redis": "connected"}), 200
-    except Exception as e:
-        return jsonify({"status": "unhealthy", "error": str(e)}), 500
+  try:
+    r.ping()
+    return jsonify({"status": "healthy", "redis": "connected"}), 200
+  except Exception as e:
+    return jsonify({"status": "unhealthy", "error": str(e)}), 503
+
+
+@app.route("/livez")
+def livez():
+  # Liveness should only prove the web process is up.
+  return jsonify({"status": "alive"}), 200
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
